@@ -10,6 +10,7 @@
 #import "TBCoordinateQuadTree.h"
 #import "TBClusterAnnotationView.h"
 #import "TBClusterAnnotation.h"
+#import "TBQuadTree.h"
 
 @interface TBMapViewController () <MKMapViewDelegate>
 @property (strong, nonatomic) MKMapView *mapView;
@@ -31,6 +32,7 @@
     [self.coordinateQuadTree buildTree];
 }
 
+///给视图添加动画
 - (void)addBounceAnnimationToView:(UIView *)view
 {
     CAKeyframeAnimation *bounceAnimation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
@@ -50,16 +52,20 @@
 
 - (void)updateMapViewAnnotationsWithAnnotations:(NSArray *)annotations
 {
+    //当前的标注
     NSMutableSet *before = [NSMutableSet setWithArray:self.mapView.annotations];
     [before removeObject:[self.mapView userLocation]];
     NSSet *after = [NSSet setWithArray:annotations];
 
+    //before与after的交集为要保留下来的标注
     NSMutableSet *toKeep = [NSMutableSet setWithSet:before];
     [toKeep intersectSet:after];
 
+    //after与toKeep差集为要新加的标注
     NSMutableSet *toAdd = [NSMutableSet setWithSet:after];
     [toAdd minusSet:toKeep];
 
+    //before与after的差集为要移除的标注
     NSMutableSet *toRemove = [NSMutableSet setWithSet:before];
     [toRemove minusSet:after];
 
@@ -71,6 +77,9 @@
 
 #pragma mark - MKMapViewDelegate
 
+/**
+ *    在子线程更新标注
+ */
 - (void)mapView:(MKMapView *)mapView regionDidChangeAnimated:(BOOL)animated
 {
     [[NSOperationQueue new] addOperationWithBlock:^{
@@ -83,6 +92,7 @@
 
 - (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id<MKAnnotation>)annotation
 {
+    
     static NSString *const TBAnnotatioViewReuseID = @"TBAnnotatioViewReuseID";
 
     TBClusterAnnotationView *annotationView = (TBClusterAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:TBAnnotatioViewReuseID];
@@ -103,5 +113,19 @@
         [self addBounceAnnimationToView:view];
     }
 }
+
+//测试内存
+//- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+//    static int i = 0;
+//    if (i%2 == 0) {
+//        [self.coordinateQuadTree buildTree];
+//    } else {
+//        TBFreeQuadTreeNode(self.coordinateQuadTree.root);
+//        [self.coordinateQuadTree.mapView removeFromSuperview];
+//        self.coordinateQuadTree.mapView = nil;
+//        self.coordinateQuadTree.root = NULL;
+//    }
+//    i++;
+//}
 
 @end

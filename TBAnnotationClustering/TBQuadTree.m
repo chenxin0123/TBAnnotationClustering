@@ -7,7 +7,7 @@
 //
 
 #import "TBQuadTree.h"
-
+#import "TBCoordinateQuadTree.h"
 #pragma mark - Constructors
 
 TBQuadTreeNodeData TBQuadTreeNodeDataMake(double x, double y, void* data)
@@ -40,6 +40,7 @@ TBQuadTreeNode* TBQuadTreeNodeMake(TBBoundingBox boundary, int bucketCapacity)
 
 #pragma mark - Bounding Box Functions
 
+///TBBoundingBox是否包含数据
 bool TBBoundingBoxContainsData(TBBoundingBox box, TBQuadTreeNodeData data)
 {
     bool containsX = box.x0 <= data.x && data.x <= box.xf;
@@ -48,6 +49,7 @@ bool TBBoundingBoxContainsData(TBBoundingBox box, TBQuadTreeNodeData data)
     return containsX && containsY;
 }
 
+///b2必须在b1的右下角
 bool TBBoundingBoxIntersectsBoundingBox(TBBoundingBox b1, TBBoundingBox b2)
 {
     return (b1.x0 <= b2.xf && b1.xf >= b2.x0 && b1.y0 <= b2.yf && b1.yf >= b2.y0);
@@ -55,6 +57,10 @@ bool TBBoundingBoxIntersectsBoundingBox(TBBoundingBox b1, TBBoundingBox b2)
 
 #pragma mark - Quad Tree Functions
 
+/**
+ *  将一个给定节点划分为四块
+ *  字节点的容量等于父节点容量
+ */
 void TBQuadTreeNodeSubdivide(TBQuadTreeNode* node)
 {
     TBBoundingBox box = node->boundingBox;
@@ -77,19 +83,23 @@ void TBQuadTreeNodeSubdivide(TBQuadTreeNode* node)
 
 bool TBQuadTreeNodeInsertData(TBQuadTreeNode* node, TBQuadTreeNodeData data)
 {
+    //节点坐标不在范围内 返回false
     if (!TBBoundingBoxContainsData(node->boundingBox, data)) {
         return false;
     }
 
+    //容量未满
     if (node->count < node->bucketCapacity) {
         node->points[node->count++] = data;
         return true;
     }
 
+    //容量已满 先创建四个子节点
     if (node->northWest == NULL) {
         TBQuadTreeNodeSubdivide(node);
     }
-
+    
+    //将数据节点放入子节点
     if (TBQuadTreeNodeInsertData(node->northWest, data)) return true;
     if (TBQuadTreeNodeInsertData(node->northEast, data)) return true;
     if (TBQuadTreeNodeInsertData(node->southWest, data)) return true;
@@ -98,18 +108,29 @@ bool TBQuadTreeNodeInsertData(TBQuadTreeNode* node, TBQuadTreeNodeData data)
     return false;
 }
 
+
+/**
+ *  找到给定节点给定范围内的所有数据节点 然后执行block
+ *
+ *  @param node  给定节点
+ *  @param range 给定范围
+ *  @param block 接收TBQuadTreeNodeData类型参数
+ */
 void TBQuadTreeGatherDataInRange(TBQuadTreeNode* node, TBBoundingBox range, TBDataReturnBlock block)
 {
+    //节点的范围去给定范围无相交区域 直接返回
     if (!TBBoundingBoxIntersectsBoundingBox(node->boundingBox, range)) {
         return;
     }
 
+    //先从本节点的数据中查找
     for (int i = 0; i < node->count; i++) {
         if (TBBoundingBoxContainsData(range, node->points[i])) {
             block(node->points[i]);
         }
     }
 
+    //如果自己是叶节点 返回
     if (node->northWest == NULL) {
         return;
     }
@@ -120,6 +141,7 @@ void TBQuadTreeGatherDataInRange(TBQuadTreeNode* node, TBBoundingBox range, TBDa
     TBQuadTreeGatherDataInRange(node->southEast, range, block);
 }
 
+///对所有节点调用block
 void TBQuadTreeTraverse(TBQuadTreeNode* node, TBQuadTreeTraverseBlock block)
 {
     block(node);
@@ -134,6 +156,16 @@ void TBQuadTreeTraverse(TBQuadTreeNode* node, TBQuadTreeTraverseBlock block)
     TBQuadTreeTraverse(node->southEast, block);
 }
 
+/**
+ *  创建四叉树
+ *
+ *  @param data        所有的数据节点
+ *  @param count       data中的数据节点总数
+ *  @param boundingBox 根节点的范围
+ *  @param capacity    节点容量
+ *
+ *  @return 返回四叉树
+ */
 TBQuadTreeNode* TBQuadTreeBuildWithData(TBQuadTreeNodeData *data, int count, TBBoundingBox boundingBox, int capacity)
 {
     TBQuadTreeNode* root = TBQuadTreeNodeMake(boundingBox, capacity);
@@ -144,6 +176,7 @@ TBQuadTreeNode* TBQuadTreeBuildWithData(TBQuadTreeNodeData *data, int count, TBB
     return root;
 }
 
+///释放内存
 void TBFreeQuadTreeNode(TBQuadTreeNode* node)
 {
     if (node->northWest != NULL) TBFreeQuadTreeNode(node->northWest);
@@ -152,7 +185,10 @@ void TBFreeQuadTreeNode(TBQuadTreeNode* node)
     if (node->southEast != NULL) TBFreeQuadTreeNode(node->southEast);
 
     for (int i=0; i < node->count; i++) {
-        free(node->points[i].data);
+        TBHotelInfo *data = node->points[i].data;
+        free(data->hotelName);
+        free(data->hotelPhoneNumber);
+        free(data);
     }
     free(node->points);
     free(node);

@@ -7,7 +7,12 @@
 //
 
 #import <Foundation/Foundation.h>
-
+/**
+ *  数据节点
+ *  x 存放维度 latitude
+ *  y 存放经度 longitude
+ *  data 存放TBHotelInfo结构体指针
+ */
 typedef struct TBQuadTreeNodeData {
     double x;
     double y;
@@ -15,12 +20,25 @@ typedef struct TBQuadTreeNodeData {
 } TBQuadTreeNodeData;
 TBQuadTreeNodeData TBQuadTreeNodeDataMake(double x, double y, void* data);
 
+/**
+ *  TBBoundingBox表示一个范围 存放两个对角点(左上角和右下角)
+ *  x0 xf 表示维度
+ *  y0 yf 表示经度
+ */
 typedef struct TBBoundingBox {
     double x0; double y0;
     double xf; double yf;
 } TBBoundingBox;
 TBBoundingBox TBBoundingBoxMake(double x0, double y0, double xf, double yf);
 
+/**
+ *  四叉树节点
+ *  northWest。。。四个子节点
+ *  boundingBox 范围
+ *  bucketCapacity 可存储的数据节点个数 数据优先存储在本节点 当容量满时存放到子节点
+ *  points 数据节点数组 大小为sizeof(TBQuadTreeNodeData) * bucketCapacity
+ *  count 当前points数据节点个数
+ */
 typedef struct quadTreeNode {
     struct quadTreeNode* northWest;
     struct quadTreeNode* northEast;

@@ -25,6 +25,7 @@ CGRect TBCenterRect(CGRect rect, CGPoint center)
 static CGFloat const TBScaleFactorAlpha = 0.3;
 static CGFloat const TBScaleFactorBeta = 0.4;
 
+///返回0.6-1
 CGFloat TBScaledValueForValue(CGFloat value)
 {
     return 1.0 / (1.0 + expf(-1 * TBScaleFactorAlpha * powf(value, TBScaleFactorBeta)));
@@ -80,6 +81,7 @@ CGFloat TBScaledValueForValue(CGFloat value)
 {
     CGContextRef context = UIGraphicsGetCurrentContext();
 
+    //设置图形上下文的抗锯齿开启或关闭
     CGContextSetAllowsAntialiasing(context, true);
 
     UIColor *outerCircleStrokeColor = [UIColor colorWithWhite:0 alpha:0.25];
